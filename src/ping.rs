@@ -12,6 +12,6 @@ pub fn ping(stream: &mut TcpStream) -> Result<()> {
             return Ok(());
         }
         println!("Received: {}", String::from_utf8_lossy(&buf[..size]));
-        stream.write_all(b"+PONG\r\n r")?;
+        stream.write_all(b"+PONG\r\n")?;
     }
 }
