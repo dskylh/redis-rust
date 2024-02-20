@@ -1,21 +1,16 @@
 // Uncomment this block to pass the first stage
-use anyhow::Result;
 use redis_starter_rust::ping::ping;
-use std::net::TcpListener;
+use tokio::net::TcpListener;
 
-fn main() -> Result<()> {
+#[tokio::main]
+async fn main() -> anyhow::Result<()> {
     // You can use print statements as follows for debugging, they'll be visible when running tests.
     println!("Logs from your program will appear here!");
 
-    let listener = TcpListener::bind("127.0.0.1:6379").unwrap();
+    let listener = TcpListener::bind("127.0.0.1:6379").await?;
 
-    for stream in listener.incoming() {
-        match stream {
-            Ok(mut stream) => ping(&mut stream)?,
-            Err(e) => {
-                println!("error: {}", e);
-            }
-        }
+    loop {
+        let (mut socket, _) = listener.accept().await?;
+        tokio::spawn(async move { ping(&mut socket).await });
     }
-    Ok(())
 }
