@@ -9,11 +9,13 @@ fn main() {
 
     let listener = TcpListener::bind("127.0.0.1:6379").unwrap();
 
-    for stream in listener.incoming() {
-        match stream {
-            Ok(mut stream) => ping(&mut stream),
-            Err(e) => {
-                println!("error: {}", e);
+    loop {
+        for stream in listener.incoming() {
+            match stream {
+                Ok(mut stream) => ping(&mut stream),
+                Err(e) => {
+                    println!("error: {}", e);
+                }
             }
         }
     }
