@@ -1,7 +1,4 @@
-use std::{
-    io::{Read, Write},
-    net::TcpStream,
-};
+use std::{io::Write, net::TcpStream};
 
 pub fn ping(stream: &mut TcpStream) {
     let buf = b"+PONG\r\n";
