@@ -1,6 +1,17 @@
-use std::{io::Write, net::TcpStream};
+use anyhow::Result;
+use std::{
+    io::{Read, Write},
+    net::TcpStream,
+};
 
-pub fn ping(stream: &mut TcpStream) {
-    let buf = b"+PONG\r\n";
-    let _ = stream.write_all(buf);
+pub fn ping(stream: &mut TcpStream) -> Result<()> {
+    let mut buf = [0; 128];
+    loop {
+        let size = stream.read(&mut buf)?;
+        if size == 0 {
+            return Ok(());
+        }
+        println!("Received: {}", String::from_utf8_lossy(&buf[..size]));
+        stream.write_all(b"+PONG\r\n r")?;
+    }
 }
