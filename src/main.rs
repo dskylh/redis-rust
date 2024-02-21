@@ -25,7 +25,7 @@ mod tests {
     fn test_parse_simple_string() {
         let input = Bytes::from_static(b"+OK\r\n");
         let result = Resp::parse_simple_string(input).unwrap();
-        assert_eq!(result, (Resp::SimpleString("OK".to_string()), input.len()));
+        assert_eq!(result, Resp::SimpleString("OK".to_string()));
     }
 
     #[test]

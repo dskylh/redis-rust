@@ -100,32 +100,33 @@ impl Resp {
     }
 
     pub fn parse_array(input: Bytes) -> anyhow::Result<Resp> {
-        let mut len = 0;
-
-        if let Some(first) = input.first() {
-            if first != &ARRAY {
-                return Err(anyhow!("Not a correct array byte"));
-            }
-        }
-
-        let mut iter = input.iter().skip(1).peekable();
-
-        while let Some(byte) = iter.next() {
-            if *byte == b'\r' {
-                break;
-            }
-            len = len * 10 + (byte - b'0') as i64;
-        }
-
-        let mut iter = iter.skip(1);
-        let mut result = Vec::with_capacity(len as usize);
-
-        for _ in 0..len {
-            let collected: Vec<u8> = iter.collect();
-            let remaining = Bytes::from(collected);
-            result.push(Resp::parse(remaining).unwrap());
-        }
-        Ok(Resp::Array(result))
+        // let mut len = 0;
+        //
+        // if let Some(first) = input.first() {
+        //     if first != &ARRAY {
+        //         return Err(anyhow!("Not a correct array byte"));
+        //     }
+        // }
+        //
+        // let mut iter = input.iter().skip(1).peekable();
+        //
+        // while let Some(byte) = iter.next() {
+        //     if *byte == b'\r' {
+        //         break;
+        //     }
+        //     len = len * 10 + (byte - b'0') as i64;
+        // }
+        //
+        // let mut iter = iter.skip(1);
+        // let mut result = Vec::with_capacity(len as usize);
+        //
+        // for _ in 0..len {
+        //     let collected: Vec<u8> = iter.collect();
+        //     let remaining = Bytes::from(collected);
+        //     result.push(Resp::parse(remaining).unwrap());
+        // }
+        // Ok(Resp::Array(result))
+        todo!()
     }
 
     // implement parse
