@@ -1,7 +1,9 @@
 use std::net::{Ipv4Addr, SocketAddrV4};
+use tokio::io::{AsyncRead, AsyncReadExt, AsyncWriteExt};
 
+use bytes::BytesMut;
 // Uncomment this block to pass the first stage
-use redis_starter_rust::connection::Connection;
+use redis_starter_rust::{command::RespCommand, connection::Connection};
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
@@ -10,7 +12,25 @@ async fn main() -> anyhow::Result<()> {
 
     let ip = Ipv4Addr::new(127, 0, 0, 1);
     let socket = SocketAddrV4::new(ip, 6379);
-    let mut connection = Connection::new(socket).await?;
-    connection.handle_client().await?;
+    let mut connection = Connection::new(socket).await?.stream;
+    tokio::spawn(async move {
+        loop {
+            let mut buf = BytesMut::new();
+            let bytes_read = connection.read(&mut buf).await.unwrap();
+            if bytes_read == 0 {
+                break;
+            }
+            let request = String::from_utf8_lossy(&buf);
+            println!("Got data: {}", request);
+            let command = RespCommand::parse_command(&request);
+            let response = command.execute();
+            let bytes_written = connection.write_all(&response).await;
+            if bytes_written.is_err() {
+                break;
+            }
+            println!("Sent data: {}", String::from_utf8_lossy(&response));
+        }
+    });
+
     Ok(())
 }
