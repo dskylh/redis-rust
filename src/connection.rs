@@ -27,9 +27,8 @@ impl Connection {
         let mut parser = RespParser::default();
         loop {
             match self.stream.read(&mut buf).await {
-                Ok(n) if n == 0 => {
-                    return Err(anyhow!("connection closed by client"));
-                }
+                // Ok(n) if n == 0 => {
+                //     return Err(anyhow!("connection closed by client"));
                 Ok(..) => {
                     let command_str = parser.decode(&mut buf);
                     match command_str {
