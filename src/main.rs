@@ -12,8 +12,8 @@ async fn main() -> anyhow::Result<()> {
 
     let ip = Ipv4Addr::new(127, 0, 0, 1);
     let socket = SocketAddrV4::new(ip, 6379);
-    let mut connection = Connection::new(socket).await?.stream;
     tokio::spawn(async move {
+        let mut connection = Connection::new(socket).await.unwrap().stream;
         loop {
             let mut buf = BytesMut::new();
             connection.read(&mut buf).await.unwrap();
