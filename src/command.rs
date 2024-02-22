@@ -11,12 +11,11 @@ impl RespCommand {
     pub fn parse_command(command: &str) -> RespCommand {
         let parts = command.split_whitespace();
         let mut parts = parts.map(|s| s.to_owned().to_lowercase());
+
         match parts.next() {
             Some(cmd) => match cmd.as_str() {
                 "ping" => RespCommand::Ping,
-                "echo" => {
-                    RespCommand::Echo(parts.collect::<Vec<String>>().join(" ").as_bytes().into())
-                }
+                "echo" => RespCommand::Echo(parts.next().unwrap().into()),
                 _ => panic!("Unknown command"),
             },
             None => panic!("No command"),
