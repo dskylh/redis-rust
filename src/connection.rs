@@ -30,6 +30,7 @@ impl Connection {
                 // Ok(n) if n == 0 => {
                 //     return Err(anyhow!("connection closed by client"));
                 Ok(..) => {
+                    println!("{}", from_utf8(&buf)?);
                     let command_str = parser.decode(&mut buf);
                     match command_str {
                         Ok(Some(RedisValueRef::Array(arr))) => {
