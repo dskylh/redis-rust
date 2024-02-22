@@ -41,6 +41,11 @@ impl Connection {
                             }
                         }
                         Ok(None) => {
+                            println!("None");
+                            continue;
+                        }
+                        Ok(a) => {
+                            println!("{}", a.unwrap());
                             continue;
                         }
                         Err(..) => {

@@ -1,6 +1,7 @@
 use bytes::{Bytes, BytesMut};
 use core::{fmt, str};
 use memchr::memchr;
+use std::fmt::Display;
 
 pub type Value = Bytes;
 pub type Key = Bytes;
@@ -15,6 +16,19 @@ pub enum RedisValueRef {
     Array(Vec<RedisValueRef>),
     NullArray,
     NullBulkString,
+}
+
+impl Display for RedisValueRef {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            RedisValueRef::String(s) => write!(f, "String({})", str::from_utf8(s).unwrap()),
+            RedisValueRef::Error(e) => write!(f, "Error({})", str::from_utf8(e).unwrap()),
+            RedisValueRef::Int(i) => write!(f, "Int({})", i),
+            RedisValueRef::Array(a) => write!(f, "Array({:?})", a),
+            RedisValueRef::NullArray => write!(f, "NullArray"),
+            RedisValueRef::NullBulkString => write!(f, "NullBulkString"),
+        }
+    }
 }
 
 #[derive(Debug)]
