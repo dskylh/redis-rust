@@ -1,2 +1,3 @@
+pub mod command;
+pub mod connection;
 pub mod parser;
-pub mod ping;
