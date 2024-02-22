@@ -11,6 +11,6 @@ async fn main() -> anyhow::Result<()> {
     let ip = Ipv4Addr::new(127, 0, 0, 1);
     let socket = SocketAddrV4::new(ip, 6379);
     let mut connection = Connection::new(socket).await?;
-    tokio::spawn(async move { connection.handle_client().await });
+    connection.handle_client().await?;
     Ok(())
 }

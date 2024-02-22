@@ -50,24 +50,8 @@ impl Connection {
                         _ => unimplemented!(),
                     }
                 }
-                Err(..) => {}
-            }
-        }
-    }
-
-    pub async fn read_command(&mut self) -> Result<RespCommand> {
-        let mut buf = BytesMut::new();
-        loop {
-            let size = self.stream.read(&mut buf).await?;
-            if size < 0 {
-                return Err(anyhow!("stream no good"));
-            }
-            let mut parser = RespParser::default();
-            let response = parser.decode(&mut buf).unwrap().unwrap();
-            if let RedisValueRef::Array(arr) = response {
-                if let Some(RedisValueRef::String(str)) = arr.get(0) {
-                    let response = from_utf8(str)?;
-                    return Ok(RespCommand::parse_command(response));
+                Err(e) => {
+                    println!("Something happened {e}")
                 }
             }
         }
