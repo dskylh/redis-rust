@@ -16,10 +16,7 @@ async fn main() -> anyhow::Result<()> {
     tokio::spawn(async move {
         loop {
             let mut buf = BytesMut::new();
-            let bytes_read = connection.read(&mut buf).await.unwrap();
-            if bytes_read == 0 {
-                break;
-            }
+            connection.read(&mut buf).await.unwrap();
             let request = String::from_utf8_lossy(&buf);
             println!("Got data: {}", request);
             let command = RespCommand::parse_command(&request);
