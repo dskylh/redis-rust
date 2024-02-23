@@ -43,6 +43,7 @@ async fn main() -> anyhow::Result<()> {
             loop {
                 match connection.read(&mut buf).await {
                     Ok(0) => {
+                        print!("000000000000000");
                         return Ok(());
                     }
                     Ok(n) => {
