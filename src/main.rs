@@ -24,15 +24,22 @@ async fn main() -> anyhow::Result<()> {
             loop {
                 match socket.read(&mut buf).await {
                     // Return or break depending on your application logic
-                    Ok(0) => return, // Connection closed
+                    Ok(0) => return Ok(()), // Connection closed
                     Ok(n) => {
                         // Process the received data
                         let request = String::from_utf8_lossy(&buf);
                         println!("Received: {}", request);
+                        let command = RespCommand::parse_command(&request);
+                        let response = command.execute();
+                        println!("{}", String::from_utf8_lossy(&response));
+                        let bytes_written = socket.write_all(&response).await;
+                        if bytes_written.is_err() {
+                            return Err(anyhow!("error happened while writing to socket"));
+                        }
                     }
                     Err(e) => {
                         println!("Failed to read from socket; error = {:?}", e);
-                        return;
+                        return Err(anyhow!("error happened: {}", e));
                     }
                 }
             }
