@@ -1,3 +1,4 @@
+use anyhow::anyhow;
 use std::net::{Ipv4Addr, SocketAddrV4};
 use tokio::io::{AsyncRead, AsyncReadExt, AsyncWriteExt};
 
@@ -12,21 +13,54 @@ async fn main() -> anyhow::Result<()> {
 
     let ip = Ipv4Addr::new(127, 0, 0, 1);
     let socket = SocketAddrV4::new(ip, 6379);
+    // loop {
+    //     let (mut socket, _) = listener.accept().await?;
+    //
+    //     // Spawn a new task for each connection to handle it concurrently
+    //     tokio::spawn(async move {
+    //         let mut buf = [0; 1024];
+    //         loop {
+    //             match socket.read(&mut buf).await {
+    //                 // Return or break depending on your application logic
+    //                 Ok(0) => return, // Connection closed
+    //                 Ok(n) => {
+    //                     // Process the received data
+    //                     println!("Received: {}", String::from_utf8_lossy(&buf[..n]));
+    //                 }
+    //                 Err(e) => {
+    //                     println!("Failed to read from socket; error = {:?}", e);
+    //                     return;
+    //                 }
+    //             }
+    //         }
+    //     });
+    // }
     loop {
         let listener = Connection::new(socket).await.unwrap().listener;
         let (mut connection, _) = listener.accept().await?;
         tokio::spawn(async move {
             let mut buf = BytesMut::new();
-            connection.read(&mut buf).await.unwrap();
-            let request = String::from_utf8_lossy(&buf);
-            println!("Got data: {}", request);
-            let command = RespCommand::parse_command(&request);
-            let response = command.execute();
-            let bytes_written = connection.write_all(&response).await;
-            if bytes_written.is_err() {
-                return;
+            loop {
+                match connection.read(&mut buf).await {
+                    Ok(0) => {
+                        return Ok(());
+                    }
+                    Ok(n) => {
+                        let request = String::from_utf8_lossy(&buf[..n]);
+                        println!("Got data: {}", request);
+                        let command = RespCommand::parse_command(&request);
+                        let response = command.execute();
+                        let bytes_written = connection.write_all(&response).await;
+                        if bytes_written.is_err() {
+                            return Err(anyhow!("Failed to write to socket"));
+                        }
+                        println!("Sent data: {}", String::from_utf8_lossy(&response));
+                    }
+                    Err(e) => {
+                        return Err(anyhow!("Failed to read from socket; error = {:?}", e));
+                    }
+                }
             }
-            println!("Sent data: {}", String::from_utf8_lossy(&response));
         });
     }
 }
