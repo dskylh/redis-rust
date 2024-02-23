@@ -27,7 +27,7 @@ async fn main() -> anyhow::Result<()> {
                     Ok(0) => return, // Connection closed
                     Ok(n) => {
                         // Process the received data
-                        let request = String::from_utf8_lossy(&buf);
+                        let request = String::from_utf8_lossy(&buf[..n]);
                         println!("Received: {}", request);
                     }
                     Err(e) => {
