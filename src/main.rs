@@ -19,8 +19,8 @@ async fn main() -> anyhow::Result<()> {
 
         // Spawn a new task for each connection to handle it concurrently
         tokio::spawn(async move {
-            let mut buf = BytesMut::new();
-            buf.reserve(1024);
+            let buf: &[u8] = &[0; 1024];
+            let mut buf = BytesMut::from(buf);
             loop {
                 match socket.read(&mut buf).await {
                     // Return or break depending on your application logic
