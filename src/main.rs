@@ -12,9 +12,9 @@ async fn main() -> anyhow::Result<()> {
 
     let ip = Ipv4Addr::new(127, 0, 0, 1);
     let socket = SocketAddrV4::new(ip, 6379);
-    tokio::spawn(async move {
+    loop {
         let mut connection = Connection::new(socket).await.unwrap().stream;
-        loop {
+        tokio::spawn(async move {
             let mut buf = BytesMut::new();
             connection.read(&mut buf).await.unwrap();
             let request = String::from_utf8_lossy(&buf);
@@ -23,11 +23,9 @@ async fn main() -> anyhow::Result<()> {
             let response = command.execute();
             let bytes_written = connection.write_all(&response).await;
             if bytes_written.is_err() {
-                break;
+                return;
             }
             println!("Sent data: {}", String::from_utf8_lossy(&response));
-        }
-    });
-
-    Ok(())
+        });
+    }
 }
