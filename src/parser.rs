@@ -202,7 +202,7 @@ fn parse(buf: &BytesMut, pos: usize) -> RedisResult {
     }
 }
 
-#[derive(Default)]
+#[derive(Default, Clone, Copy)]
 pub struct RespParser;
 
 impl RespParser {
@@ -223,7 +223,7 @@ impl RespParser {
     }
 }
 
-#[derive(Default)]
+#[derive(Default, Clone, Copy)]
 pub struct RedisEncoder;
 
 impl RedisEncoder {

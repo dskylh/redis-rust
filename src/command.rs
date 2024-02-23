@@ -17,7 +17,7 @@ impl RespCommand {
             Some(cmd) => match cmd.as_str() {
                 "ping" => RespCommand::Ping,
                 "echo" => RespCommand::Echo(parts.next().unwrap().into()),
-                _ => panic!("Unknown command"),
+                _ => panic!("Unknown command {}", command),
             },
             None => panic!("No command"),
         }
