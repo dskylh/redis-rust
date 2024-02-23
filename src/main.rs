@@ -19,7 +19,7 @@ async fn main() -> anyhow::Result<()> {
 
         // Spawn a new task for each connection to handle it concurrently
         tokio::spawn(async move {
-            let buf: &[u8] = &[0; 1024];
+            let buf: &[u8] = &[];
             let mut buf = BytesMut::from(buf);
             loop {
                 match socket.read(&mut buf).await {
@@ -27,7 +27,8 @@ async fn main() -> anyhow::Result<()> {
                     Ok(0) => return, // Connection closed
                     Ok(n) => {
                         // Process the received data
-                        println!("Received: {}", String::from_utf8_lossy(&buf[..n]));
+                        let request = String::from_utf8_lossy(&buf);
+                        println!("Received: {}", request);
                     }
                     Err(e) => {
                         println!("Failed to read from socket; error = {:?}", e);
