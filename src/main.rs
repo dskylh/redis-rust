@@ -1,6 +1,6 @@
 use anyhow::anyhow;
 use std::net::{Ipv4Addr, SocketAddrV4};
-use tokio::io::{AsyncRead, AsyncReadExt, AsyncWriteExt};
+use tokio::io::{AsyncReadExt, AsyncWriteExt};
 
 use bytes::BytesMut;
 // Uncomment this block to pass the first stage
@@ -19,7 +19,7 @@ async fn main() -> anyhow::Result<()> {
   let socket = SocketAddrV4::new(ip, 6379);
   let listener = Connection::new(socket).await?.listener;
   let mut parser = RespParser::default();
-  let mut encoder = RedisEncoder::default();
+  let _encoder = RedisEncoder::default();
   loop {
     let (mut socket, _) = listener.accept().await?;
 
@@ -31,7 +31,7 @@ async fn main() -> anyhow::Result<()> {
         match socket.read(&mut buf).await {
           // Return or break depending on your application logic
           Ok(0) => return Ok(()), // Connection closed
-          Ok(n) => {
+          Ok(_n) => {
             // Process the received data
             println!("Received: {}", String::from_utf8_lossy(&buf.clone()));
             match parser.decode(&mut buf).unwrap() {
@@ -75,33 +75,4 @@ async fn main() -> anyhow::Result<()> {
       }
     });
   }
-  // loop {
-  //     let listener = Connection::new(socket).await.unwrap().listener;
-  //     let (mut connection, _) = listener.accept().await?;
-  //     tokio::spawn(async move {
-  //         let mut buf = BytesMut::new();
-  //         loop {
-  //             match connection.read(&mut buf).await {
-  //                 Ok(0) => {
-  //                     print!("000000000000000");
-  //                     return Ok(());
-  //                 }
-  //                 Ok(n) => {
-  //                     let request = String::from_utf8_lossy(&buf[..n]);
-  //                     println!("Got data: {}", request);
-  //                     let command = RespCommand::parse_command(&request);
-  //                     let response = command.execute();
-  //                     let bytes_written = connection.write_all(&response).await;
-  //                     if bytes_written.is_err() {
-  //                         return Err(anyhow!("Failed to write to socket"));
-  //                     }
-  //                     println!("Sent data: {}", String::from_utf8_lossy(&response));
-  //                 }
-  //                 Err(e) => {
-  //                     return Err(anyhow!("Failed to read from socket; error = {:?}", e));
-  //                 }
-  //             }
-  //         }
-  //     });
-  // }
 }
