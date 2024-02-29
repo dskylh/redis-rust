@@ -5,7 +5,7 @@ use tokio::io::{AsyncReadExt, AsyncWriteExt};
 use bytes::BytesMut;
 // Uncomment this block to pass the first stage
 use redis_starter_rust::{
-  command::RespCommand,
+  command::{RespCommand, Store},
   connection::Connection,
   parser::{RedisEncoder, RedisValueRef, RespParser},
 };
@@ -20,8 +20,10 @@ async fn main() -> anyhow::Result<()> {
   let listener = Connection::new(socket).await?.listener;
   let mut parser = RespParser::default();
   let _encoder = RedisEncoder::default();
+
   loop {
     let (mut socket, _) = listener.accept().await?;
+    let store: Store = Store::new();
 
     // Spawn a new task for each connection to handle it concurrently
     tokio::spawn(async move {
@@ -37,28 +39,13 @@ async fn main() -> anyhow::Result<()> {
             match parser.decode(&mut buf).unwrap() {
               Some(value) => {
                 if let RedisValueRef::Array(arr) = value {
-                  if arr.len() == 1 {
-                    if let RedisValueRef::String(c) = &arr[0] {
-                      let command = RespCommand::parse_command(&c, None);
-                      let response = command.execute();
-                      println!("{}", String::from_utf8_lossy(&response));
-                      let bytes_written = socket.write_all(&response).await;
-                      if bytes_written.is_err() {
-                        return Err(anyhow!("error happened while writing to socket"));
-                      }
-                    };
-                  } else if arr.len() == 2 {
-                    if let RedisValueRef::String(c) = &arr[0] {
-                      if let RedisValueRef::String(arg) = &arr[1] {
-                        let command = RespCommand::parse_command(&c, Some(arg.clone()));
-                        let response = command.execute();
-                        println!("{}", String::from_utf8_lossy(&response));
-                        let bytes_written = socket.write_all(&response).await;
-                        if bytes_written.is_err() {
-                          return Err(anyhow!("error happened while writing to socket"));
-                        }
-                      }
-                    }
+                  let response = RespCommand::parse_command_arr(arr);
+                  let response = response.execute(store.clone());
+
+                  println!("{}", String::from_utf8_lossy(&response));
+                  let bytes_written = socket.write_all(&response).await;
+                  if bytes_written.is_err() {
+                    return Err(anyhow!("error happened while writing to socket"));
                   }
                 }
               }
