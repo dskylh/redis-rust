@@ -96,8 +96,14 @@ impl RespCommand {
   }
 
   fn get(&self, key: &Bytes, store: Store) -> Bytes {
+    let mut encoder = RedisEncoder::default();
     match store.get(key) {
-      Some(value) => value,
+      Some(value) => {
+        let value = RedisValueRef::String(value);
+        let mut buf = BytesMut::new();
+        encoder.encode(value, &mut buf);
+        buf.into()
+      }
       None => Bytes::from("$-1\r\n"),
     }
   }
