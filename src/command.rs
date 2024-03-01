@@ -26,6 +26,7 @@ impl Store {
     let mut expiry_times = self.expiry_times.lock().unwrap();
 
     if let Some(expiry) = expiry {
+      println!("{:?}", expiry.as_millis());
       expiry_times.insert(key.clone(), Instant::now() + expiry);
     }
     data.insert(key, value.clone());
