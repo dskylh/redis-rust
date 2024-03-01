@@ -40,7 +40,7 @@ impl Store {
       .lock()
       .unwrap()
       .get(key)
-      .map(|expiry_time| expiry_time > &Instant::now());
+      .map(|expiry_time| expiry_time < &Instant::now());
 
     if expired == Some(true) {
       self.data.lock().unwrap().remove(key);
