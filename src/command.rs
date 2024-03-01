@@ -97,7 +97,7 @@ impl RespCommand {
   fn set(&self, key: &Bytes, value: &Bytes, expiry: Option<Bytes>, store: Store) -> Bytes {
     let expiry = match expiry {
       Some(expiry) => {
-        let expiry = String::from_utf8_lossy(&expiry).parse::<u64>().unwrap();
+        let expiry = String::from_utf8_lossy(&expiry).parse().unwrap();
         println!("{:?}", expiry);
         Some(Duration::from_secs(expiry))
       }
@@ -118,6 +118,8 @@ impl RespCommand {
       .unwrap()
       .get(key)
       .map(|expiry_time| expiry_time < &Instant::now());
+
+    println!("{:?}", expired);
 
     if expired == Some(true) {
       store.data.lock().unwrap().remove(key);
