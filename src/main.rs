@@ -1,5 +1,8 @@
 use anyhow::anyhow;
-use std::net::{Ipv4Addr, SocketAddrV4};
+use std::{
+  net::{Ipv4Addr, SocketAddrV4},
+  sync::{Arc, Mutex},
+};
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
 
 use bytes::BytesMut;
@@ -21,9 +24,10 @@ async fn main() -> anyhow::Result<()> {
   let mut parser = RespParser::default();
   let _encoder = RedisEncoder::default();
 
+  let store: Arc<Mutex<Store>> = Arc::new(Mutex::new(Store::new()));
   loop {
     let (mut socket, _) = listener.accept().await?;
-    let store: Store = Store::new();
+    let store = Arc::clone(&store);
 
     // Spawn a new task for each connection to handle it concurrently
     tokio::spawn(async move {
@@ -39,7 +43,7 @@ async fn main() -> anyhow::Result<()> {
               Some(value) => {
                 if let RedisValueRef::Array(arr) = value {
                   let response = RespCommand::parse_command_arr(arr);
-                  let response = response.execute(store.clone());
+                  let response = response.execute(store.lock().unwrap().clone());
 
                   let bytes_written = socket.write_all(&response).await;
                   if bytes_written.is_err() {
