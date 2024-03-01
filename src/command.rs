@@ -25,11 +25,10 @@ impl Store {
     let mut data = self.data.lock().unwrap();
     let mut expiry_times = self.expiry_times.lock().unwrap();
 
-    data.insert(key.clone(), value.clone());
     if let Some(expiry) = expiry {
-      expiry_times.insert(key, Instant::now() + expiry);
+      expiry_times.insert(key.clone(), Instant::now() + expiry);
     }
-
+    data.insert(key, value.clone());
     Ok(())
   }
 
