@@ -35,14 +35,12 @@ async fn main() -> anyhow::Result<()> {
           Ok(0) => return Ok(()), // Connection closed
           Ok(_n) => {
             // Process the received data
-            println!("Received: {}", String::from_utf8_lossy(&buf.clone()));
             match parser.decode(&mut buf).unwrap() {
               Some(value) => {
                 if let RedisValueRef::Array(arr) = value {
                   let response = RespCommand::parse_command_arr(arr);
                   let response = response.execute(store.clone());
 
-                  println!("{}", String::from_utf8_lossy(&response));
                   let bytes_written = socket.write_all(&response).await;
                   if bytes_written.is_err() {
                     return Err(anyhow!("error happened while writing to socket"));

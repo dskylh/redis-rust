@@ -4,23 +4,32 @@ use bytes::{Bytes, BytesMut};
 use std::{
   collections::HashMap,
   sync::{Arc, Mutex},
+  time::{Duration, Instant},
 };
 
 #[derive(Debug, Clone)]
 pub struct Store {
   data: Arc<Mutex<HashMap<Bytes, Bytes>>>,
+  expiry_times: Arc<Mutex<HashMap<Bytes, Instant>>>,
 }
 
 impl Store {
   pub fn new() -> Self {
     let data: Arc<Mutex<HashMap<Bytes, Bytes>>> = Arc::new(Mutex::new(HashMap::new()));
+    let expiry_times: Arc<Mutex<HashMap<Bytes, Instant>>> = Arc::new(Mutex::new(HashMap::new()));
 
-    Self { data }
+    Store { data, expiry_times }
   }
 
-  pub fn set(&self, key: Bytes, value: Bytes) -> anyhow::Result<()> {
+  pub fn set(&self, key: Bytes, value: Bytes, expiry: Option<Duration>) -> anyhow::Result<()> {
     if let Ok(mut data) = self.data.lock() {
-      data.insert(key, value);
+      data.insert(key.clone(), value);
+      if let Some(expiry) = expiry {
+        let expiry_time = Instant::now() + expiry;
+        if let Ok(mut expiry_times) = self.expiry_times.lock() {
+          expiry_times.insert(key, expiry_time);
+        }
+      }
       Ok(())
     } else {
       Err(anyhow!("couldn't set the data"))
@@ -43,19 +52,11 @@ pub enum Response {
 pub enum RespCommand {
   Ping,
   Echo(Bytes),
-  Set((Bytes, Bytes)),
+  Set((Bytes, Bytes, Option<Bytes>)),
   Get(Bytes),
 }
 
 impl RespCommand {
-  pub fn parse_command(command: &Bytes, argument: Option<Bytes>) -> RespCommand {
-    match String::from_utf8_lossy(&command).to_lowercase().as_ref() {
-      "ping" => RespCommand::Ping,
-      "echo" => RespCommand::Echo(argument.unwrap()),
-      _ => panic!("unknown command"),
-    }
-  }
-
   pub fn parse_command_arr(args: Vec<RedisValueRef>) -> RespCommand {
     let mut command: Bytes = Bytes::new();
     let mut arguments: Vec<Bytes> = Vec::new();
@@ -70,10 +71,15 @@ impl RespCommand {
         }
       }
     }
+
     match String::from_utf8_lossy(&command).to_lowercase().as_ref() {
       "ping" => RespCommand::Ping,
       "echo" => RespCommand::Echo(arguments[0].clone()),
-      "set" => RespCommand::Set((arguments[0].clone(), arguments[1].clone())),
+      "set" => RespCommand::Set((
+        arguments[0].clone(),
+        arguments[1].clone(),
+        arguments.get(3).cloned(),
+      )),
       "get" => RespCommand::Get(arguments[0].clone()),
       _ => panic!("unknown command"),
     }
@@ -83,13 +89,21 @@ impl RespCommand {
     match self {
       RespCommand::Ping => self.ping(),
       RespCommand::Echo(msg) => self.echo(&msg),
-      RespCommand::Set((key, value)) => self.set(key, value, store),
+      RespCommand::Set((key, value, expiry)) => self.set(key, value, expiry.clone(), store),
       RespCommand::Get(key) => self.get(key, store),
     }
   }
 
-  fn set(&self, key: &Bytes, value: &Bytes, store: Store) -> Bytes {
-    match store.set(key.clone(), value.clone()) {
+  fn set(&self, key: &Bytes, value: &Bytes, expiry: Option<Bytes>, store: Store) -> Bytes {
+    let expiry = match expiry {
+      Some(expiry) => {
+        let expiry = String::from_utf8_lossy(&expiry).parse::<u64>().unwrap();
+        Some(Duration::from_secs(expiry))
+      }
+      None => None,
+    };
+
+    match store.set(key.clone(), value.clone(), expiry) {
       Ok(_) => Bytes::from("+OK\r\n"),
       Err(_) => Bytes::from("-ERR\r\n"),
     }
@@ -97,14 +111,27 @@ impl RespCommand {
 
   fn get(&self, key: &Bytes, store: Store) -> Bytes {
     let mut encoder = RedisEncoder::default();
-    match store.get(key) {
-      Some(value) => {
-        let value = RedisValueRef::String(value);
-        let mut buf = BytesMut::new();
-        encoder.encode(value, &mut buf);
-        buf.into()
+    let expired = store
+      .expiry_times
+      .lock()
+      .unwrap()
+      .get(key)
+      .map(|expiry_time| expiry_time < &Instant::now());
+
+    if expired == Some(true) {
+      store.data.lock().unwrap().remove(key);
+      store.expiry_times.lock().unwrap().remove(key);
+      Bytes::from("$-1\r\n")
+    } else {
+      match store.get(key) {
+        Some(value) => {
+          let value = RedisValueRef::String(value);
+          let mut buf = BytesMut::new();
+          encoder.encode(value, &mut buf);
+          buf.into()
+        }
+        None => Bytes::from("$-1\r\n"),
       }
-      None => Bytes::from("$-1\r\n"),
     }
   }
 
