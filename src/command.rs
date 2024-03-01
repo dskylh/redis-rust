@@ -35,19 +35,16 @@ impl Store {
 
   pub fn get(&self, key: &Bytes) -> Option<Bytes> {
     // only get a key if it didn't expire
-    let expired = self
-      .expiry_times
-      .lock()
-      .unwrap()
-      .get(key)
-      .map(|expiry_time| expiry_time < &Instant::now());
+    let mut data = self.data.lock().unwrap();
+    let mut expiry_times = self.expiry_times.lock().unwrap();
 
-    if expired == Some(true) {
-      self.data.lock().unwrap().remove(key);
-      self.expiry_times.lock().unwrap().remove(key);
-      None
-    } else {
-      self.data.lock().unwrap().get(key).cloned()
+    match expiry_times.get(key) {
+      Some(expiry) if Instant::now() > *expiry => {
+        data.remove(key);
+        expiry_times.remove(key);
+        None
+      }
+      _ => data.get(key).cloned(),
     }
   }
 }
