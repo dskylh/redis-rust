@@ -98,6 +98,7 @@ impl RespCommand {
     let expiry = match expiry {
       Some(expiry) => {
         let expiry = String::from_utf8_lossy(&expiry).parse::<u64>().unwrap();
+        println!("{:?}", expiry);
         Some(Duration::from_secs(expiry))
       }
       None => None,
