@@ -22,25 +22,33 @@ impl Store {
   }
 
   pub fn set(&self, key: Bytes, value: Bytes, expiry: Option<Duration>) -> anyhow::Result<()> {
-    if let Ok(mut data) = self.data.lock() {
-      data.insert(key.clone(), value);
-      println!("{:?}", data);
-      if let Some(expiry) = expiry {
-        let expiry_time = Instant::now() + expiry;
-        if let Ok(mut expiry_times) = self.expiry_times.lock() {
-          expiry_times.insert(key, expiry_time);
-          println!("{:?}", expiry_times);
-        }
-      }
-      Ok(())
-    } else {
-      Err(anyhow!("couldn't set the data"))
+    let mut data = self.data.lock().unwrap();
+    let mut expiry_times = self.expiry_times.lock().unwrap();
+
+    data.insert(key.clone(), value.clone());
+    if let Some(expiry) = expiry {
+      expiry_times.insert(key, Instant::now() + expiry);
     }
+
+    Ok(())
   }
 
   pub fn get(&self, key: &Bytes) -> Option<Bytes> {
-    let data = self.data.lock().unwrap();
-    data.get(key).cloned()
+    // only get a key if it didn't expire
+    let expired = self
+      .expiry_times
+      .lock()
+      .unwrap()
+      .get(key)
+      .map(|expiry_time| expiry_time > &Instant::now());
+
+    if expired == Some(true) {
+      self.data.lock().unwrap().remove(key);
+      self.expiry_times.lock().unwrap().remove(key);
+      None
+    } else {
+      self.data.lock().unwrap().get(key).cloned()
+    }
   }
 }
 
@@ -114,31 +122,15 @@ impl RespCommand {
 
   fn get(&self, key: &Bytes, store: Store) -> Bytes {
     let mut encoder = RedisEncoder::default();
-    let expired = store
-      .expiry_times
-      .lock()
-      .unwrap()
-      .get(key)
-      .map(|expiry_time| expiry_time > &Instant::now());
 
-    // expiry_time = 100secs
-
-    println!("{:?}", expired);
-
-    if expired == Some(true) {
-      store.data.lock().unwrap().remove(key);
-      store.expiry_times.lock().unwrap().remove(key);
-      Bytes::from("$-1\r\n")
-    } else {
-      match store.get(key) {
-        Some(value) => {
-          let value = RedisValueRef::String(value);
-          let mut buf = BytesMut::new();
-          encoder.encode(value, &mut buf);
-          buf.into()
-        }
-        None => Bytes::from("$-1\r\n"),
+    match store.get(key) {
+      Some(value) => {
+        let value = RedisValueRef::String(value);
+        let mut buf = BytesMut::new();
+        encoder.encode(value, &mut buf);
+        buf.into()
       }
+      None => Bytes::from("$-1\r\n"),
     }
   }
 
