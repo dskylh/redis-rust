@@ -24,10 +24,12 @@ impl Store {
   pub fn set(&self, key: Bytes, value: Bytes, expiry: Option<Duration>) -> anyhow::Result<()> {
     if let Ok(mut data) = self.data.lock() {
       data.insert(key.clone(), value);
+      println!("{:?}", data);
       if let Some(expiry) = expiry {
         let expiry_time = Instant::now() + expiry;
         if let Ok(mut expiry_times) = self.expiry_times.lock() {
           expiry_times.insert(key, expiry_time);
+          println!("{:?}", expiry_times);
         }
       }
       Ok(())
@@ -117,7 +119,9 @@ impl RespCommand {
       .lock()
       .unwrap()
       .get(key)
-      .map(|expiry_time| expiry_time < &Instant::now());
+      .map(|expiry_time| expiry_time > &Instant::now());
+
+    // expiry_time = 100secs
 
     println!("{:?}", expired);
 
