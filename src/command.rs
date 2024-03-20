@@ -1,5 +1,4 @@
 use crate::parser::{RedisEncoder, RedisValueRef};
-use anyhow::anyhow;
 use bytes::{Bytes, BytesMut};
 use std::{
   collections::HashMap,

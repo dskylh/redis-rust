@@ -1,28 +1,44 @@
 use anyhow::anyhow;
 use std::{
+  env,
   net::{Ipv4Addr, SocketAddrV4},
   sync::{Arc, Mutex},
 };
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
 
 use bytes::BytesMut;
-// Uncomment this block to pass the first stage
 use redis_starter_rust::{
   command::{RespCommand, Store},
   connection::Connection,
-  parser::{RedisEncoder, RedisValueRef, RespParser},
+  parser::{RedisValueRef, RespParser},
 };
+
+// handle arguments for selecting the port
+// the port argument will be given as such --port <port_number>
+fn handle_args(args: Vec<String>) -> anyhow::Result<SocketAddrV4> {
+  let mut port = 6379;
+  for (i, arg) in args.iter().enumerate() {
+    if arg == "--port" {
+      if i + 1 < args.len() {
+        port = args[i + 1].parse().unwrap();
+      } else {
+        return Err(anyhow!("no port given"));
+      }
+    }
+  }
+  Ok(SocketAddrV4::new(Ipv4Addr::new(127, 0, 0, 1), port))
+}
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
   // You can use print statements as follows for debugging, they'll be visible when running tests.
   println!("Logs from your program will appear here!");
 
-  let ip = Ipv4Addr::new(127, 0, 0, 1);
-  let socket = SocketAddrV4::new(ip, 6379);
+  let args: Vec<String> = env::args().collect();
+
+  let socket = handle_args(args)?;
   let listener = Connection::new(socket).await?.listener;
   let mut parser = RespParser::default();
-  let _encoder = RedisEncoder::default();
 
   let store: Arc<Mutex<Store>> = Arc::new(Mutex::new(Store::new()));
   loop {
